@@ -3,12 +3,12 @@ name: question-bank-paper-builder
 description: Build traceable, randomized exam papers from mixed question-bank materials with structured answers, explanations, knowledge points, difficulty balancing, offline formula rendering, and audited HTML/PDF output.
 metadata:
   short-description: Organize question banks and generate audited random papers
-  version: "0.13-fix3"
+  version: "1.0"
 ---
 
 # Question Bank Paper Builder
 
-Current revision: `v0.13-fix3`. Detailed contracts, runtime pins, browser parameters,
+Current revision: `v1.0`. Detailed contracts, runtime pins, browser parameters,
 acceptance evidence, and revision history are maintained in `references/specification.md`.
 
 Use this skill when the user provides exam papers, answer books, explanations, lecture notes, scans, or mixed question-bank files and wants a cleaned question bank plus newly composed papers. It applies across mathematics, English, 408, and similar subjects.

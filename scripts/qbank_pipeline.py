@@ -1,6 +1,6 @@
-"""Canonical v0.13-fix3 question-bank pipeline.
+"""Canonical v1.0 question-bank pipeline.
 
-This entry point intentionally accepts only the v0.13-fix3 structured contract. It
+This entry point intentionally accepts only the v1.0 structured contract. It
 does not read legacy flat records or hard-coded project paths.
 """
 from __future__ import annotations
@@ -32,7 +32,7 @@ except ImportError:
 
 TOOL_ROOT = Path(__file__).resolve().parents[1]
 SCHEMA_DIR = TOOL_ROOT / "references" / "schemas"
-SCRIPT_VERSION = "qbank_pipeline-v0.13-fix3"
+SCRIPT_VERSION = "qbank_pipeline-v1.0"
 QUESTION_SIGNATURE_VERSION = "question_signature_v1"
 
 
@@ -641,7 +641,7 @@ def run(config_path: Path):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Canonical v0.13-fix3 question-bank pipeline")
+    parser = argparse.ArgumentParser(description="Canonical v1.0 question-bank pipeline")
     parser.add_argument("--config", required=True, type=Path)
     args = parser.parse_args()
     try:
