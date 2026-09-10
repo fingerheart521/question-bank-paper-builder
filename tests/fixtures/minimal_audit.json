@@ -1,0 +1,22 @@
+{
+  "run_id": "test-run-001",
+  "status": "passed",
+  "counts": {"questions": 2, "eligible": 1},
+  "difficulty_distribution": {
+    "raw_all": {"简单": 1, "中等": 1},
+    "eligible_pool": {"简单": 1},
+    "paper_target": {"简单": 1},
+    "paper_actual": {"简单": 1},
+    "deviation": {"简单": 0}
+  },
+  "randomization": {
+    "random_seed": 123,
+    "selection_algorithm": "weighted_constrained_sampling_v1",
+    "constraints": {"questions": 1},
+    "candidate_pool_hash": "abc",
+    "fallback_used": false,
+    "selection_order": ["q-valid-001"],
+    "fallback_path": []
+  },
+  "issues": []
+}

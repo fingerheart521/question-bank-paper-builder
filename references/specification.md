@@ -1,0 +1,396 @@
+# 题库整理与智能组卷通用规范
+
+> 规范版本：v0.13-fix3  
+> 状态：测试中  
+> 最后更新：2026-09-10  
+> 适用工具版本：以运行清单中的脚本、提示词和运行时版本为准
+
+### 变更记录
+
+- v0.5-test：补充正式 Schema、项目根定义、模型/提示词运行信息、稳定 ID、匹配证据、难度双重分布、随机复现、素材资产、最低组卷条件和归档边界。
+- v0.7-test：补齐无 `jsonschema` 时的 manifest/audit/config/题库硬校验；增加题库与配置顶层 Schema；PDF 读取配置并记录失败审计；输出按 `run_id` 隔离；增加学科覆盖约束；清理工具包中的历史缓存和非正式脚本。
+- v0.8-test：硬性审计失败阻断最终产物；拒绝覆盖已存在的 `run_id`；收紧答案/解析/匹配资格与稳定 ID 校验；顶层题库 Schema 引用单题 Schema；增加 PDF 成品 A4、文本、公式和答案来源验收；重构为标准 skill 目录。
+- v0.9-test：补齐 PDF 内容级验收和空输入失败；使 `pdf.enabled` 真正控制导出；使用 `referencing.Registry` 稳定解析 `$ref`；收紧无 `jsonschema` fallback；将稳定 ID 规范化算法版本写入 manifest；增加 PDF 回归测试。
+- v0.10-test：补全 fallback 的嵌套类型、枚举和结构校验；支持自动发现 Chrome/Edge/Chromium、动态 DevTools 端口和 Windows 输出编码；完成 Chrome 与 Edge 的真实 PDF 导出验证；明确关键页渲染证据仍需人工版式复核。
+- v0.10-fix：修复 fallback 将字符串、浮点数或布尔值误当作 `difficulty` 整数的问题；补充 `difficulty_label` 枚举校验；浏览器启动遇到端口竞争或 DevTools 端点失败时自动使用新端口和独立 profile 重试，最多 3 次。
+- v0.11-test：fallback 改为解释正式 JSON Schema 的通用校验器，补齐 config/manifest/audit 的嵌套类型、必需字段、枚举、范围和附加字段校验；PDF 在浏览器、Python 包、`pdfinfo`/`pdftotext`/`pdftoppm` 或 HTML/公式资源失败时仍写 `pdf_audit.json`；明确工具包不内置 MathJax/KaTeX，含公式输入必须配置可用本地资源；记录真实浏览器查找、无窗口启动参数和测试覆盖。
+- v0.12-test：固定 MathJax 4.1.3；含公式时首次运行自动下载并校验 SHA-512，缓存到 `work/_runtime`，后续复用；支持显式本地资源覆盖；增加批量视觉异常筛查和 AI 抽样复核清单，降低逐份人工查看成本。
+- v0.13-test：去除单文件 PDF 失败审计中的重复错误；MathJax tar 解压只接受普通文件和目录，拒绝符号链接、硬链接及特殊条目；精确锁定 Python 必需依赖版本；精简 `SKILL.md`，把版本历史和本机参数集中到本规范。
+- v0.13-fix：修复无公式 HTML 因 MathJax 配置脚本中的 `$` 分隔符被误判为含公式、继而等待超时的问题；生成端写入 `data-has-formula`，导出端兼容旧 HTML 时只解析可见正文并忽略 `script`、`style`、`template`、`noscript`；增加 Chrome/Edge 真实 headless 无公式回归测试。
+- v0.13-fix2：旧 HTML 公式检测进一步忽略整个 `head`（包括 `title`）；增加使用本地 MathJax 的 Chrome/Edge 真实 headless 公式 PDF 回归测试。
+- v0.13-fix3：公式识别抽为共享模块，优先显式标记和标准 TeX 定界符/命令，并排除纯货币金额；复杂矩阵、分段函数和多行公式加入 Chrome/Edge 真实 headless 回归；浏览器测试统一调用 `discover_browsers()`，不再写死本机安装路径。
+- v0.6-test：正式接入 Schema 校验；补齐 PDF Promise 等待和渲染验收；实现 manifest 页数/角色判断、容量审计、难度偏差和机器状态；生成题目/答案独立 HTML；隔离历史脚本并增加自动化测试入口。
+- v0.4-test：补充目录契约、阶段化流程、结构化状态、离线公式渲染、失败策略和 PDF 验收。
+
+## 1. 目标与适用范围
+
+本规范用于把一个或多个科目的试卷、答案、解析、讲义、专题资料和扫描文件，整理为可追溯的结构化题库，并据此生成多套新的随机试卷。
+
+规范适用于数学、英语、408 及其他包含客观题、主观题、公式、表格或图片的题库。最终内容应尽可能保持原文含义、题目结构、选项顺序、公式和解析，不直接拼接原 PDF 页面。
+
+最终交付通常包括：
+
+- 结构化题库 JSON/CSV；
+- 组卷清单和审计报告；
+- 只含题目的 HTML；
+- 题目结束后分页、答案与解析从新页开始的 HTML/PDF；
+- 必要时保留可复核的中间结果和运行清单。
+
+## 2. 用户要求基线
+
+除非用户另有说明，默认遵守以下要求：
+
+1. 去除原页面背景、页眉、页脚、广告和无关说明，只保留题目、选项、作答要求、答案和解析等原有内容。
+2. 优先使用文字和 LaTeX；只有必须保留的图形、表格或示意图才使用图片。
+3. 不在题目正文中插入来源、答案、解析或处理说明。
+4. 所有题目连续排版，题目结束后强制分页；答案与解析从新页开始。
+5. 答案记录中按“题号与来源、答案、解析等”组织来源和答案，不再单独设置来源章节。
+6. 题目按题型、知识点、难度、来源等综合随机；简单、中等、困难题按原始题库比例分配，不能全部集中为中等题。其他科目同样适用。
+7. 对无法确认的内容不得猜测；应回看高分辨率原页、使用其他识别模型重试，仍无法确认时标记为待复核并禁止进入默认随机卷。
+8. HTML 应适合手机查看和 A4 打印；PDF 应为 A4 尺寸且不带浏览器默认页眉页脚。
+
+## 3. 目录契约与路径规则
+
+脚本不得写死具体机器、用户、科目或历史项目路径。所有路径由命令行参数、配置文件或项目根目录推导得到。
+
+`project_root` 是一次独立题库处理任务的根目录。若总目录包含多个科目，则每个科目目录视为独立 project；跨科目处理由上层调度器管理，不能混用不同科目的输入、工作文件和输出。
+
+建议每次运行使用如下逻辑结构：
+
+```text
+project_root/
+  input/       本次输入资料，只读
+  work/        本次运行的临时文件、截图、识别结果和日志
+  output/      本次最终交付物
+  archive/     已完成运行的清单、审计报告和必要的复核材料
+  schemas/     可选的项目自定义 Schema
+```
+
+规则：
+
+- `input` 只读取，不在原资料目录中写入产物。
+- `work` 使用唯一 `run_id` 子目录，避免旧结果混入本次运行。
+- `output` 只存最终交付物，不存截图、浏览器缓存、调试 JSON 或重试文件。
+- `archive` 只保留可复现和可审计所需的摘要、清单及必要证据，临时缓存默认清理。
+- 若 `work/<run_id>`、`output/<run_id>` 或 `archive/<run_id>` 任一目录已存在，正式入口必须拒绝覆盖并要求新的 `run_id`，避免同一运行标识残留旧文件。
+- 最终 JSON 的来源路径优先保存为相对于项目根目录的路径；如需绝对路径，单独存储，不影响跨机器使用。
+- 运行前应检查输入、工作和输出路径，禁止把旧输出目录误当作输入目录。
+- 旧项目中的 `output/审计`、`output/试卷`、`output/题库`、`tmp` 等目录不属于新输入；迁移时只能作为人工复核或归档证据保留，不得被正式入口自动读取。
+
+## 4. 输入登记与运行清单
+
+阶段开始时递归登记所有输入文件，并生成 `manifest.json` 或等价清单。至少记录：
+
+```json
+{
+  "run_id": "时间戳或唯一标识",
+  "project_root": "相对或规范化路径",
+  "input_files": [
+    {
+      "path": "相对项目根目录的路径",
+      "sha256": "文件哈希",
+      "size": 0,
+      "type": "pdf/docx/image/text/other",
+      "pages": 0,
+      "role": "试卷/答案/解析/讲义/其他",
+      "included": true,
+      "reason": "参与或排除原因"
+    }
+  ],
+  "script_version": "版本或 git 提交号",
+  "prompt_version": "提示词版本",
+  "prompt_hash": "提示词 SHA-256",
+  "models": [{"name": "模型名称", "version": "模型版本", "purpose": "识别/复核"}],
+  "runtime": {"python": "版本", "browser": "版本", "mathjax": "版本或资源哈希"},
+  "config": {}
+}
+```
+
+文件角色可由文件名、目录、页眉、内容和模型判断，但不能只依赖页码区间。输入文件发生变化时，应通过哈希发现变化并重新处理受影响阶段。
+
+## 5. 分阶段处理流程
+
+把题库整理和随机组卷拆成可独立检查的阶段。后续阶段只能读取前一阶段合格的结构化结果。
+
+### 阶段 A：文件登记
+
+生成运行 ID、输入快照、文件哈希、页数和角色判断。
+
+### 阶段 B：内容提取与视觉识别
+
+1. 优先提取 PDF、Word、TXT 等原生文本。
+2. 只有文本缺失、公式错乱、表格无法解析或页面为扫描图时使用视觉识别。
+3. 视觉识别应分别提取题干、选项、答案和解析，并保留原页或高分辨率截图作为证据。
+4. 可并行测试多个可用模型，但应记录模型、版本、耗时、失败原因和人工或规则选择结果。
+5. 超时、空结果或低置信度页面应低并发重试；达到重试上限后进入待复核队列，不得静默丢弃。
+6. 数学公式、特殊符号、矩阵、分段函数、表格和换行应尽量转换为 LaTeX 或结构化文本。模型不能确认的字符使用 `[unclear]`，不得凭常识补猜。
+
+### 阶段 C：规范化与去重
+
+统一题号、题型、选项格式、换行、公式定界符和字符编码；保留原文中的有意义换行，尤其是长公式和分步条件。
+
+去重时综合来源套题、原题号、题干相似度、选项和公式特征。不得仅按题号去重，也不得把同题不同版本错误合并。
+
+### 阶段 D：答案与解析匹配
+
+答案、解析和题目按套题、原题号、页眉卷号、题干特征、选项特征和页码逐级匹配。页码只能作为辅助定位，不能作为唯一来源依据。每次匹配必须保存方法、置信度、候选项、冲突标记和证据；一对多、多对一、题号与题干冲突、题干一致但题号缺失均进入 `ambiguous` 或 `unmatched`，不得静默选择。
+
+### 阶段 E：题库审计
+
+检查题号、题干、选项、答案、解析、知识点、难度、来源和公式完整性，并生成结构化状态和审计报告。
+
+### 阶段 F：随机组卷
+
+先按学科和题型建候选池，再用多维约束和固定随机种子组卷。审计报告必须保存 `random_seed`、候选池快照哈希、约束配置、选择算法、选择顺序和降级路径，使同一输入、规范版本、工具版本和 seed 能复现同一套试卷。候选不足时必须明确报错或进入可见的降级流程，不得静默生成不完整试卷。
+
+默认最低组卷条件由项目配置明确给出，例如：
+
+```json
+{
+  "minimum_paper_requirements": {
+    "questions": 22,
+    "choice": 10,
+    "blank": 6,
+    "solution": 6,
+    "min_subject_coverage": {},
+    "max_source_repetition": 3
+  }
+}
+```
+
+具体科目可以覆盖默认值，但必须在运行清单和审计报告中记录。
+
+### 阶段 G：HTML/PDF 导出
+
+生成只含题目的版本和含答案解析的版本。题目部分结束后强制分页，答案部分从新页开始，再导出 A4 PDF。
+
+### 阶段 H：最终验收
+
+执行机器检查和抽样视觉检查；任一硬性验收项失败时，禁止把对应 PDF 标记为最终合格产物。
+
+## 6. 统一中间数据格式
+
+各脚本之间必须使用统一 JSON 结构，字段名和类型不得因模型或脚本改变。顶层包含 `document`、`pages`、`questions`、`answers`、`recognition`、`audit`。正式约束见 Skill 的 `references/schemas/question.schema.json`、`references/schemas/question_bank.schema.json`、`references/schemas/manifest.schema.json`、`references/schemas/config.schema.json` 和 `references/schemas/audit.schema.json`；每个阶段入口和出口都应校验 Schema，失败即为 `ERROR`。
+
+每道题至少包含：
+
+```json
+{
+  "id": "稳定唯一编号",
+  "display_id": "人工可读编号",
+  "number": "原题号",
+  "type": "选择题/填空题/解答题/其他",
+  "subject": "学科",
+  "knowledge_points": ["主知识点", "辅助知识点"],
+  "difficulty": 1,
+  "difficulty_label": "简单/中等/困难",
+  "difficulty_source": "manual/model/heuristic/unknown",
+  "text": "题干",
+  "options": ["A. ..."],
+  "answer": "原答案",
+  "explanation": "原解析",
+  "source": {
+    "file": "相对路径",
+    "page": 1,
+    "set": "套题或卷号",
+    "question": "原题号"
+  },
+  "match": {
+    "method": "set_number_question_number",
+    "confidence": 0.0,
+    "candidates": [],
+    "conflict": false,
+    "evidence": [{"file": "相对路径", "page": 1, "text_similarity": 0.0}]
+  },
+  "assets": [{
+    "id": "asset-001",
+    "type": "figure/table/image",
+    "path": "work/run_id/assets/asset-001.png",
+    "source_page": 1,
+    "sha256": "文件哈希",
+    "alt": "简短描述"
+  }],
+  "status": {
+    "question": "verified/needs_review/rejected",
+    "answer": "verified/unmatched/ambiguous/missing",
+    "explanation": "verified/ambiguous/missing",
+    "source": "verified/uncertain",
+    "eligible_for_random_paper": false,
+    "eligibility_reasons": []
+  }
+}
+```
+
+稳定 ID 生成规则：`question_signature_v1` 先对学科、来源套题、原题号、题干和选项执行 Unicode NFC、换行统一、连续空白折叠，再以排序 JSON 形成签名；`id = "q-" + sha256(signature)[:16]`。算法版本必须写入 manifest，后续变更必须递增版本，不得静默改变既有 ID。来源套题、原题号或题干修正后，只有确实改变题目身份时才改变 ID。另存 `display_id` 供人工阅读，不能用显示名称替代稳定 ID。
+
+字段允许空值时必须明确写出空值原因；禁止通过缺字段、空字符串或异常文本让后续脚本猜测状态。必要时使用 JSON Schema 校验每一阶段的输入输出。
+
+## 7. 状态、验证和组卷资格
+
+`verified` 不是“脚本成功运行”的同义词。至少应分别判断：题干和选项是否完整、公式表格图片是否可读、答案是否匹配且可信、解析是否存在且对应、来源是否可追溯、题型知识点难度是否有依据。
+
+只有上述内容均达到要求，且没有 `[unclear]`、待复核或明显格式残留时，才可将题目标记为 `verified` 并设置 `eligible_for_random_paper=true`。
+
+资格还必须满足：答案和解析为非空字符串；`match.conflict` 为 `false`；匹配置信度 `>= 0.90`。建议将 `0.75 <= confidence < 0.90` 标记为 `needs_review`，低于 `0.75` 标记为 `unmatched`。Schema 和入口校验都应执行这些硬约束。
+
+组卷资格应使用明确布尔字段和原因数组，不依赖简单字符串搜索。默认排除：答案或解析缺失、答案未匹配、关键内容待复核、来源不明、公式无法渲染、题型无法判断的题目。
+
+## 8. 知识点与难度
+
+知识点应结合题干、选项、解析和学科分类推断，至少保存一个主知识点；模型推断应标明来源，无法可靠判断时标记为待复核。
+
+难度采用 1-5 级或简单/中等/困难三档，但必须统一映射。难度来源标记为 `manual`、`model`、`heuristic` 或 `unknown`。关键词启发式只能作为初始估计，不能伪装成人工确认。
+
+组卷时同时统计两组难度分布：原始全部题库 `raw_all` 与通过资格筛选的 `eligible_pool`。目标比例、实际比例和偏差分别记录为 `paper_target`、`paper_actual`、`deviation`。若合格子集与原始分布差异较大，必须在审计报告中说明“按合格子集近似”或“难度分布不可验证”，不得声称严格复现原始比例。
+
+建议审计字段：
+
+```json
+{
+  "difficulty_distribution": {
+    "raw_all": {},
+    "eligible_pool": {},
+    "paper_target": {},
+    "paper_actual": {},
+    "deviation": {}
+  }
+}
+```
+
+## 9. 来源与答案解析的文档结构
+
+题目部分只展示题号、题干、选项和作答要求。题目结束后使用强制分页。
+
+答案部分从新页开始，按试卷题号排列，每条记录采用以下顺序：
+
+```text
+第 N 题｜来源：文件/套题/原题号/页码
+答案：……
+解析：……
+```
+
+来源与答案、解析融合在同一条记录中，不在文档末尾另列来源章节，也不把来源穿插到题目正文中。
+
+## 10. HTML、公式和 A4 PDF
+
+1. 先进行 HTML 转义，再交给 MathJax 或 KaTeX 渲染。
+2. 最终导出默认使用本地 MathJax/KaTeX 资源，禁止把公网 CDN 作为唯一依赖。
+3. 打印前等待公式渲染 Promise 完成，并检查公式 DOM 数量或渲染标记。
+4. 验收分三层：HTML DOM 检查 MathJax/KaTeX 渲染节点；HTML 源码检查未闭合或未处理的公式定界符和命令；PDF 视觉检查公式是否可见、溢出或截断。文本检查不能替代视觉检查。
+5. 检查页面中不得残留未处理的 `$...$`、`\\frac`、`\\begin{...}` 等裸 LaTeX。
+6. 短公式可行内显示；长公式按原文换行或单独显示，避免超出 A4 页面宽度。不得为了统一而把所有公式强制设为块级。
+7. 移动端和桌面端统一正文、选项、公式的基准字号和行高，避免纯文字与公式字号不一致。
+8. 使用 Chromium DevTools Protocol 或等价离线方式导出，设置 A4 尺寸、零默认页眉页脚并保留打印背景。导出后必须用 `pdfinfo`（或等价库）验证页面尺寸和页数，用 `pdftotext`（或等价库）检查题号、答案/来源/解析、裸 LaTeX 和页眉页脚；关键页面还要进行视觉抽查。任一硬性检查失败都必须写入 `pdf_audit.json` 并将 PDF 阶段标记为失败。
+9. 配置 `pdf.enabled=false` 时必须跳过 PDF 导出并写入 `status=skipped` 审计；HTML 目录为空时必须失败，不能生成空的 `passed` 审计。未显式指定浏览器时，应按配置、常见安装路径和 PATH 自动发现 Chrome、Edge 或 Chromium，并使用动态空闲 DevTools 端口。浏览器端点启动失败或发生端口竞争时，必须使用新的端口和独立 profile 自动重试，默认最多 3 次；三次均失败才判定为 `ERROR`。
+
+10. MathJax 采用固定版本与 SHA-512 校验。首次遇到公式且未提供 `mathjax_local_script` 时，下载官方 npm tarball 到 `work/_runtime/mathjax-<version>`，解压前校验完整性，写入 `runtime.json`；网络不可用且缓存不存在时明确失败。缓存不是输入，不得被题库扫描阶段读取。
+
+### 10.1 本次真实浏览器查找与启动记录
+
+本轮在 Windows 本机只做文件存在性查找，没有执行带 UI 的浏览器启动或 `--version` 探测。按以下顺序检查配置路径、常见安装路径和 `PATH`：
+
+- Chrome：`C:\Program Files\Google\Chrome\Application\chrome.exe`；
+- Edge：`C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe`；
+- 其次检查用户安装目录、Linux/macOS 常见路径和 `PATH` 中的 `google-chrome`、`chrome`、`chromium`、`chromium-browser`、`msedge`。
+
+本机查找到 Chrome 和 Edge 后，端到端验证选择 Chrome。每次尝试均由 `subprocess.Popen` 使用以下参数启动，且不创建可见窗口：
+
+```text
+<browser> --headless=new --disable-gpu --no-sandbox
+  --user-data-dir=<work>/<run_id>/pdf_profile-<attempt>
+  --remote-debugging-port=<动态空闲的 127.0.0.1 端口>
+  --remote-allow-origins=* --no-first-run --no-default-browser-check about:blank
+```
+
+随后通过 `http://127.0.0.1:<port>/json/version` 等待 DevTools 端点，使用 CDP 打开本地 HTML、等待字体和 MathJax Promise、调用 `Page.printToPDF`，最后用 `pdfinfo`、`pdftotext`、`pdftoppm` 验收。`pdftoppm` 会渲染全部页面，Pillow 对每页计算非白像素边界和贴边比例，自动标出疑似空白/截断页；第一页、答案起始页、最后一页及疑似异常页进入 AI 视觉抽样清单。若端口竞争、端点未启动或依赖缺失，改用新端口/新 profile 重试或写入失败审计；绝不退回可见浏览器窗口。
+
+PDF 导出所需 Python 包在工具包根目录的 `requirements.txt` 中精确锁定（当前为 `websocket-client==1.9.2`、`Pillow==12.3.0`）；`jsonschema` 不是硬依赖。`pdfinfo`、`pdftotext`、`pdftoppm` 和浏览器属于宿主机依赖，入口会在启动前检查并把缺失项写入 `pdf_audit.json`。
+
+## 11. 机器可执行的验收项
+
+### 题库验收
+
+- 输入清单、哈希和运行 ID 存在；
+- 每题有稳定 ID、题型、知识点、难度、答案、解析和来源字段；
+- 题号、选项和答案解析匹配无未处理冲突；
+- `verified` 与 `eligible_for_random_paper` 状态一致；
+- 不存在未处理的 `[unclear]` 或待复核题进入默认随机卷。
+
+### HTML 验收
+
+- 题目总数、答案条目数和来源条目数一致；
+- 题目与答案之间存在强制分页；
+- 不存在独立来源章节；
+- 不存在裸 LaTeX、乱码、空题、截断题或重叠内容；
+- 手机宽度下文字、选项和公式字号稳定且不横向溢出。
+
+### PDF 验收
+
+- 使用 `pdfinfo` 或等价工具验证 A4 页面尺寸、页数和无默认页眉页脚；
+- 使用 `pdftotext` 或等价工具验证题号连续、答案起始页存在、每题都有来源/答案/解析；
+- 检查答案之前确实存在分页；
+- 检查 PDF 文本中无裸 LaTeX 和独立来源章节；
+- 至少渲染并视觉检查第一页、答案起始页和最后一页；
+- 检查题号连续、题目数量与答案数量一致、每条答案均有来源/答案/解析；
+- 公式失败、页面缺失、空白页、截断或内容不完整时，PDF 状态为失败，不得当作最终交付。
+
+## 12. 失败等级、重试和降级
+
+- `ERROR`：输入为空、关键阶段失败、题库不足以满足最低组卷条件、公式渲染失败或 PDF 验收失败。停止对应后续阶段。
+- `WARNING`：少量页面待复核、难度证据不足、非关键来源字段不完整。允许继续，但必须写入审计报告。
+- `INFO`：正常统计、模型耗时和产物位置。
+
+建议策略：识别超时或空结果时低并发重试；单页失败只重试该页；多模型不一致时保留候选和置信信息，无法验证则进入待复核；答案册缺页标记未匹配；候选题不足时报错或显式降低组卷数量/约束；HTML 合格但 PDF 失败时可交付 HTML，但须明确 PDF 未通过验收。组合审计为 `failed` 时不得生成或保留被标记为成功的 `papers.json`、HTML 或 PDF。
+
+## 13. 临时文件、浏览器配置与归档
+
+每次运行使用唯一工作目录。截图、模型测试、重试 JSON、浏览器 profile、缓存和调试日志只放在 `work/run_id` 或归档区，不进入最终输出目录；可跨运行复用的已校验运行时资源（当前为 MathJax）例外放在 `work/_runtime`，且不参与输入扫描。
+
+成功运行后清理可再生缓存和临时截图；归档至少保留：`manifest.json`、`audit.json`、规范/脚本/提示词/模型版本信息、失败记录、人工复核题目的原页截图、最终题库和组卷清单的哈希。默认删除浏览器 profile、模型原始响应缓存、全量截图、可重建的中间 JSON、临时 HTML/PDF。失败运行可保留完整工作目录，但必须标记为失败，避免被下一次运行误读。
+
+## 14. 反例与改进
+
+- 直接拼接原 PDF：会带入背景、页眉页脚，且不能真正随机抽题；应重新排版。
+- 全部转图片：公式、清晰度、移动端字号和打印效果不稳定；应优先文字/LaTeX。
+- 依赖公网公式 CDN：离线或打印环境可能输出裸 LaTeX；应使用本地资源并做 DOM 检查。
+- 只识别题干：会丢失答案解析；题目、答案、解析必须独立抽取并关联。
+- 让模型补猜模糊字符：容易造成数学错误；应回看原页、换模型重试或保留待复核状态。
+- 只按题号随机：难度、知识点和学科会失衡；应使用多维约束和原始难度比例。
+- 只用页码区间判断来源：换版或增删封面后容易错位；应结合文件、卷号、题干和答案特征。
+- 只用“待复核”字符串判断资格：容易漏掉空字段和隐性错误；应使用结构化状态字段。
+- 一个脚本包办所有阶段：中间失败可能仍生成看似完整的产物；应按阶段生成状态并阻断不合格输入。
+
+## 15. 推荐工具执行顺序
+
+工具名称和实现可以更换，但职责顺序应保持一致：文件登记与哈希；原生文本提取与页面识别；超时/低置信度重试和多模型比较；题目规范化、去重、知识点和难度标注；答案解析匹配；题库审计和资格筛选；按题型、知识点、难度、来源和跨卷重复约束组卷；HTML 排版、离线公式渲染和移动端检查；A4 PDF 导出、文本检查和视觉抽查；归档清理并输出最终清单。
+
+Skill 中的 `scripts/qbank_pipeline.py` 是 v0.13-fix3 的唯一正式组卷入口；`scripts/validate_contract.py` 是契约校验入口；`scripts/export_pdf.py` 是参数化 PDF 导出入口。Skill 不附带旧脚本、浏览器缓存或历史识别产物；运行产生的归档仅位于具体项目的 `archive/<run_id>/`。
+
+## 16. 规范与实现状态
+
+| 要求 | 规范状态 | v0.13-fix3 实现状态 |
+|---|---|---|
+| 配置化项目路径和 run_id 隔离 | 已定义 | 已实现；最终输出写入 `output/<run_id>/` |
+| manifest 哈希、页数、角色和纳入原因 | 已定义 | 已实现（页数工具不可用时使用 `null` + `pages_status`） |
+| JSON Schema 入口/出口校验 | 已定义 | 已实现；两个正式入口共用解释正式 Schema 子集的 fallback，使用 `referencing.Registry` 解析同目录 `$ref`，无 `jsonschema` 时拒绝同一批非法记录 |
+| 结构化题目状态和组卷资格 | 已定义 | 已实现 |
+| 答案匹配置信度与冲突证据 | 已定义 | 由上游识别/匹配阶段提供，入口强制字段存在 |
+| 难度 raw/eligible 分布与偏差 | 已定义 | 已实现 |
+| 固定 seed、候选池哈希和选择顺序 | 已定义 | 已实现 |
+| 只含题目、只含答案、合并 HTML | 已定义 | 已实现 |
+| MathJax Promise 等待和 DOM/源码检查 | 已定义 | 已实现；固定 MathJax 4.1.3，首次公式使用自动下载到 `work/_runtime` 并校验 SHA-512，也支持本地资源覆盖 |
+| A4、无默认页眉页脚 PDF | 已定义 | 已实现；尺寸、页数、文本、题号、答案区分页、裸 LaTeX、空白页、贴边截断信号和关键页渲染证据均写入/受 `pdf_audit.json` 控制；关键页与疑似异常页可交给 AI 做视觉抽样，不要求逐份人工查看；浏览器、Python 包或外部命令缺失也写失败审计；`pdf.enabled=false` 会跳过导出 |
+| 自动化契约和端到端测试 | 已定义 | `tests/` 提供 31 项回归测试；覆盖无 `jsonschema` 时嵌套契约一致性、货币文本公式误判、MathJax 首次缓存、危险 tar 链接拒绝、浏览器/外部依赖缺失审计、单文件错误去重，以及简单/复杂本地 MathJax 公式导出；浏览器由 `discover_browsers()` 按配置、环境路径和 PATH 自动发现，其他环境按可用性跳过 |
+
+## 17. 最小运行示例
+
+在项目根目录准备 `input/question_bank.json`、配置文件和本工具包，然后执行：
+
+```text
+python <工具包>/scripts/qbank_pipeline.py --config <项目根目录>/config.json
+python <工具包>/scripts/export_pdf.py --config <项目根目录>/config.json --html-dir <项目根目录>/output/<run_id> --output-dir <项目根目录>/output/<run_id>/pdf --chromium <Chromium 可执行文件>
+```
+
+运行前先校验题库、manifest 和 audit；运行后检查 `output` 与 `archive/run_id`。配置文件必须提供项目根目录、输入题库、组卷数量、随机种子、题型数量、最低组卷条件和 PDF 参数。
+
+规范的核心不是固定某个模型、脚本或目录，而是保证：输入可追溯、数据结构统一、状态可验证、组卷有约束、公式可渲染、失败可发现、最终产物可复现。

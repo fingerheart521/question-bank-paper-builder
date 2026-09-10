@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "manifest.schema.json",
+  "title": "Question Bank Run Manifest",
+  "type": "object",
+  "required": ["run_id", "project_root", "input_files", "script_version", "question_signature_version", "prompt_version", "prompt_hash", "models", "runtime", "config", "status"],
+  "properties": {
+    "run_id": {"type": "string", "minLength": 1},
+    "project_root": {"type": "string", "minLength": 1},
+    "input_files": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["path", "sha256", "size", "type", "pages", "pages_status", "role", "included", "reason"],
+        "properties": {
+          "path": {"type": "string", "minLength": 1},
+          "sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+          "size": {"type": "integer", "minimum": 0},
+          "type": {"type": "string", "minLength": 1},
+          "pages": {"type": ["integer", "null"], "minimum": 0},
+          "pages_status": {"type": "string", "enum": ["verified", "tool_unavailable", "not_applicable"]},
+          "role": {"type": "string", "minLength": 1},
+          "included": {"type": "boolean"},
+          "reason": {"type": "string"},
+          "extensions": {"type": "object"}
+        },
+        "additionalProperties": false
+      }
+    },
+    "script_version": {"type": "string", "minLength": 1},
+    "question_signature_version": {"type": "string", "minLength": 1},
+    "prompt_version": {"type": "string"},
+    "prompt_hash": {"type": "string"},
+    "models": {"type": "array"},
+    "runtime": {"type": "object"},
+    "config": {"type": "object"},
+    "status": {"type": "string", "enum": ["running", "succeeded", "failed", "partial"]},
+    "warnings": {"type": "array", "items": {"type": "string"}},
+    "failure": {"type": "object"},
+    "extensions": {"type": "object"}
+  },
+  "additionalProperties": false
+}

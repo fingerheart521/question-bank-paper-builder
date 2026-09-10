@@ -1,0 +1,42 @@
+{
+  "questions": [
+    {
+      "id": "q-a940d88c87f9372d",
+      "display_id": "示例-第1题",
+      "number": 1,
+      "type": "选择题",
+      "subject": "示例学科",
+      "knowledge_points": ["示例知识点"],
+      "difficulty": 2,
+      "difficulty_label": "简单",
+      "difficulty_source": "manual",
+      "text": "示例题干",
+      "options": ["A. 1", "B. 2"],
+      "answer": "A",
+      "explanation": "示例解析",
+      "source": {"file": "input/example.pdf", "page": 1, "set": "示例卷", "question": 1},
+      "match": {"method": "set_number_question_number", "confidence": 1, "candidates": [], "conflict": false, "evidence": [{"file": "input/example.pdf", "page": 1, "text_similarity": 1}]},
+      "assets": [],
+      "status": {"question": "verified", "answer": "verified", "explanation": "verified", "source": "verified", "eligible_for_random_paper": true, "eligibility_reasons": []}
+    },
+    {
+      "id": "q-68ef57ac808a8af8",
+      "display_id": "示例-第2题",
+      "number": 2,
+      "type": "选择题",
+      "subject": "示例学科",
+      "knowledge_points": ["示例知识点"],
+      "difficulty": 3,
+      "difficulty_label": "中等",
+      "difficulty_source": "model",
+      "text": "需要复核的示例题",
+      "options": ["A. 1", "B. 2"],
+      "answer": "待复核",
+      "explanation": "待复核",
+      "source": {"file": "input/example.pdf", "page": 2, "set": "示例卷", "question": 2},
+      "match": {"method": "ambiguous", "confidence": 0.4, "candidates": ["answer-2a", "answer-2b"], "conflict": true, "evidence": [{"file": "input/example-answer.pdf", "page": 1}]},
+      "assets": [],
+      "status": {"question": "needs_review", "answer": "ambiguous", "explanation": "ambiguous", "source": "verified", "eligible_for_random_paper": false, "eligibility_reasons": ["answer_ambiguous", "explanation_ambiguous"]}
+    }
+  ]
+}

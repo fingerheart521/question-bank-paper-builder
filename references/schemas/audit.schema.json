@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "audit.schema.json",
+  "title": "Question Bank Audit",
+  "type": "object",
+  "required": ["run_id", "status", "counts", "difficulty_distribution", "randomization", "issues"],
+  "properties": {
+    "run_id": {"type": "string"},
+    "status": {"type": "string", "enum": ["passed", "warning", "failed"]},
+    "counts": {"type": "object"},
+    "difficulty_distribution": {
+      "type": "object",
+      "required": ["raw_all", "eligible_pool", "paper_target", "paper_actual", "deviation"],
+      "properties": {
+        "raw_all": {"type": "object"},
+        "eligible_pool": {"type": "object"},
+        "paper_target": {"type": "object"},
+        "paper_actual": {"type": "object"},
+        "deviation": {"type": "object"}
+      },
+      "additionalProperties": true
+    },
+    "randomization": {
+      "type": "object",
+      "required": ["random_seed", "selection_algorithm", "constraints", "candidate_pool_hash", "fallback_used"],
+      "properties": {
+        "random_seed": {"type": ["integer", "string"]},
+        "selection_algorithm": {"type": "string"},
+        "constraints": {"type": "object"},
+        "candidate_pool_hash": {"type": "string"},
+        "fallback_used": {"type": "boolean"},
+        "selection_order": {"type": "array"},
+        "fallback_path": {"type": "array"}
+      },
+      "additionalProperties": true
+    },
+    "issues": {"type": "array", "items": {"type": "object", "required": ["level", "message"], "properties": {"level": {"type": "string", "enum": ["ERROR", "WARNING", "INFO"]}, "message": {"type": "string"}}, "additionalProperties": true}}
+  },
+  "additionalProperties": true
+}

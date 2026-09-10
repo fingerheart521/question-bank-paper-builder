@@ -1,0 +1,18 @@
+{
+  "project_root": ".",
+  "input_dir": "input",
+  "work_dir": "work",
+  "output_dir": "output",
+  "archive_dir": "archive",
+  "question_bank": "input/question_bank.json",
+  "paper_count": 1,
+  "random_seed": 123,
+  "requirements": {
+    "questions": 1,
+    "by_type": {"选择题": 1},
+    "max_source_repetition": 1,
+    "allow_cross_paper_reuse": false
+  },
+  "mathjax_local_script": "",
+  "pdf": {"enabled": false}
+}

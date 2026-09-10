@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "question_bank.schema.json",
+  "title": "Question Bank",
+  "type": "object",
+  "required": ["questions"],
+  "properties": {
+    "run_id": {"type": "string"},
+    "document": {"type": "object"},
+    "pages": {"type": "array"},
+    "questions": {"type": "array", "minItems": 1, "items": {"$ref": "question.schema.json"}},
+    "answers": {"type": "array"},
+    "recognition": {"type": "object"},
+    "audit": {"type": "object"},
+    "extensions": {"type": "object"}
+  },
+  "additionalProperties": false
+}

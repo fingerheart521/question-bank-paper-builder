@@ -1,0 +1,93 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "question.schema.json",
+  "title": "Structured Question",
+  "type": "object",
+  "required": ["id", "display_id", "number", "type", "subject", "knowledge_points", "difficulty", "difficulty_source", "text", "options", "answer", "explanation", "source", "match", "assets", "status"],
+  "properties": {
+    "id": {"type": "string", "pattern": "^q-[a-f0-9]{16}$"},
+    "display_id": {"type": "string", "minLength": 1},
+    "number": {"type": ["string", "integer"]},
+    "type": {"type": "string", "minLength": 1},
+    "subject": {"type": "string", "minLength": 1},
+    "knowledge_points": {"type": "array", "items": {"type": "string", "minLength": 1}, "minItems": 1},
+    "difficulty": {"type": "integer", "minimum": 1, "maximum": 5},
+    "difficulty_label": {"type": "string", "enum": ["简单", "中等", "困难", "未知"]},
+    "difficulty_source": {"type": "string", "enum": ["manual", "model", "heuristic", "unknown"]},
+    "text": {"type": "string", "minLength": 1},
+    "options": {"type": "array", "items": {"type": "string"}},
+    "answer": {"type": "string"},
+    "explanation": {"type": "string"},
+    "source": {
+      "type": "object",
+      "required": ["file", "page", "set", "question"],
+      "properties": {
+        "file": {"type": "string", "minLength": 1},
+        "page": {"type": "integer", "minimum": 1},
+        "set": {"type": "string", "minLength": 1},
+        "question": {"type": ["string", "integer"]},
+        "extensions": {"type": "object"}
+      },
+      "additionalProperties": false
+    },
+    "match": {
+      "type": "object",
+      "required": ["method", "confidence", "candidates", "conflict", "evidence"],
+      "properties": {
+        "method": {"type": "string"},
+        "confidence": {"type": "number", "minimum": 0, "maximum": 1},
+        "candidates": {"type": "array"},
+        "conflict": {"type": "boolean"},
+        "evidence": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["file", "page"],
+            "properties": {
+              "file": {"type": "string"},
+              "page": {"type": "integer", "minimum": 1},
+              "text_similarity": {"type": "number", "minimum": 0, "maximum": 1},
+              "extensions": {"type": "object"}
+            },
+            "additionalProperties": false
+          }
+        },
+        "extensions": {"type": "object"}
+      },
+      "additionalProperties": false
+    },
+    "assets": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "type", "path", "source_page", "sha256", "alt"],
+        "properties": {
+          "id": {"type": "string", "minLength": 1},
+          "type": {"type": "string", "minLength": 1},
+          "path": {"type": "string", "minLength": 1},
+          "source_page": {"type": "integer", "minimum": 1},
+          "sha256": {"type": "string", "minLength": 1},
+          "alt": {"type": "string"},
+          "extensions": {"type": "object"}
+        },
+        "additionalProperties": false
+      }
+    },
+    "status": {
+      "type": "object",
+      "required": ["question", "answer", "explanation", "source", "eligible_for_random_paper", "eligibility_reasons"],
+      "properties": {
+        "question": {"type": "string", "enum": ["verified", "needs_review", "rejected"]},
+        "answer": {"type": "string", "enum": ["verified", "unmatched", "ambiguous", "missing"]},
+        "explanation": {"type": "string", "enum": ["verified", "ambiguous", "missing"]},
+        "source": {"type": "string", "enum": ["verified", "uncertain"]},
+        "eligible_for_random_paper": {"type": "boolean"},
+        "eligibility_reasons": {"type": "array", "items": {"type": "string"}},
+        "extensions": {"type": "object"}
+      },
+      "additionalProperties": false
+    },
+    "extensions": {"type": "object"}
+  },
+  "additionalProperties": false
+}

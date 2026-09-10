@@ -1,0 +1,58 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "config.schema.json",
+  "title": "Question Bank Run Configuration",
+  "type": "object",
+  "required": ["project_root", "question_bank", "paper_count", "random_seed", "requirements"],
+  "properties": {
+    "project_root": {"type": "string"},
+    "input_dir": {"type": "string"},
+    "work_dir": {"type": "string"},
+    "output_dir": {"type": "string"},
+    "archive_dir": {"type": "string"},
+    "question_bank": {"type": "string", "minLength": 1},
+    "run_id": {"type": "string", "minLength": 1},
+    "paper_count": {"type": "integer", "minimum": 1},
+    "random_seed": {"type": ["integer", "string"]},
+    "requirements": {
+      "type": "object",
+      "required": ["by_type"],
+      "properties": {
+        "questions": {"type": "integer", "minimum": 1},
+        "by_type": {"type": "object", "minProperties": 1, "additionalProperties": {"type": "integer", "minimum": 1}},
+        "max_source_repetition": {"type": "integer", "minimum": 1},
+        "allow_cross_paper_reuse": {"type": "boolean"},
+        "min_subject_coverage": {"type": "object", "additionalProperties": {"type": "integer", "minimum": 0}},
+        "max_difficulty_deviation": {"type": "integer", "minimum": 0},
+        "extensions": {"type": "object"}
+      },
+      "additionalProperties": false
+    },
+    "mathjax_local_script": {"type": "string"},
+    "mathjax_url": {"type": "string"},
+    "mathjax_allow_network": {"type": "boolean"},
+    "mathjax_auto_download": {"type": "boolean"},
+    "mathjax_version": {"type": "string", "minLength": 1},
+    "prompt_version": {"type": "string"},
+    "prompt_hash": {"type": "string"},
+    "models": {"type": "array"},
+    "runtime": {"type": "object"},
+    "pdf": {
+      "type": "object",
+      "properties": {
+        "enabled": {"type": "boolean"},
+        "chromium": {"type": "string"},
+        "paper_width": {"type": "number", "exclusiveMinimum": 0},
+        "paper_height": {"type": "number", "exclusiveMinimum": 0},
+        "margin_top": {"type": "number", "minimum": 0},
+        "margin_bottom": {"type": "number", "minimum": 0},
+        "margin_left": {"type": "number", "minimum": 0},
+        "margin_right": {"type": "number", "minimum": 0},
+        "extensions": {"type": "object"}
+      },
+      "additionalProperties": false
+    },
+    "extensions": {"type": "object"}
+  },
+  "additionalProperties": false
+}

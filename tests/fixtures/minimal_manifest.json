@@ -1,0 +1,13 @@
+{
+  "run_id": "test-run-001",
+  "project_root": "example-project",
+  "input_files": [{"path": "input/example.pdf", "sha256": "0000000000000000000000000000000000000000000000000000000000000000", "size": 10, "type": "pdf", "pages": 2, "pages_status": "verified", "role": "试卷", "included": true, "reason": "测试输入"}],
+  "script_version": "test",
+  "question_signature_version": "question_signature_v1",
+  "prompt_version": "test",
+  "prompt_hash": "abc",
+  "models": [{"name": "test-model", "version": "1", "purpose": "识别"}],
+  "runtime": {"python": "3", "browser": "test", "mathjax": "local"},
+  "config": {"random_seed": 123},
+  "status": "running"
+}
