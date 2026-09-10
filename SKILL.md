@@ -13,7 +13,7 @@ acceptance evidence, and revision history are maintained in `references/specific
 
 Use this skill when the user provides exam papers, answer books, explanations, lecture notes, scans, or mixed question-bank files and wants a cleaned question bank plus newly composed papers. It applies across mathematics, English, 408, and similar subjects.
 
-When one input folder contains multiple subjects, tell the user to organize and configure each subject independently before processing. Do not automatically combine different subjects into one paper. Treat the Chinese exam label “考研 408” as one integrated examination project whose content domains are 数据结构、计算机组成原理、操作系统、计算机网络; keep these domains distinct in `subject` or `knowledge_points` and balance them according to the user’s paper requirements.
+When one input folder contains multiple ordinary subjects, tell the user to organize and configure each subject independently before processing. Do not automatically combine different subjects into one paper. Treat “考研 408” as one integrated examination project: 数据结构、计算机组成原理、操作系统、计算机网络 are four content domains within the same subject and the same paper, not four separate projects. Keep the domains distinct in `subject` or `knowledge_points` and balance them according to the user’s paper requirements.
 
 ## Outcome
 
