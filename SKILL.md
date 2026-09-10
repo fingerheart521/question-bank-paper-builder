@@ -19,6 +19,17 @@ When one input folder contains multiple ordinary subjects, tell the user to orga
 
 Produce structured question records and one or more new papers. Preserve the source meaning, options, formulas, tables, meaningful line breaks, answers, explanations, knowledge points, difficulty evidence, and traceable source data. Re-typeset content as text/LaTeX whenever possible; retain an image only when a figure or table cannot be represented reliably.
 
+## Paper template priority
+
+Before composing a paper, ask the user for an official past-paper template when the required paper structure is unclear. Use the following order:
+
+1. Use a template explicitly provided by the user.
+2. Search the supplied files for official past papers, or for mock papers that clearly represent the target exam format.
+3. If neither is available, infer the paper structure from the existing question-bank papers and record that it is an inferred template.
+4. Only when the supplied materials do not contain enough structural information, search the web for reliable, current exam information. Record the source, access date, and any uncertainty; do not invent missing rules or proportions.
+
+For an integrated exam such as 考研 408, the template describes one combined paper. Do not split its four content domains into separate papers.
+
 ## Non-negotiable rules
 
 - Do not concatenate original PDF pages as the generated paper.
