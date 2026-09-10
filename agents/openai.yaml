@@ -1,6 +1,6 @@
 interface:
-  display_name: "Question Bank Paper Builder"
-  short_description: "Build audited randomized exam papers"
-  default_prompt: "Use $question-bank-paper-builder (v1.0) to organize these question-bank files and generate audited randomized papers."
+  display_name: "题库试卷生成器"
+  short_description: "整理题库并生成经过审计的随机试卷"
+  default_prompt: "使用 $question-bank-paper-builder（v1.0）整理这些题库文件并生成经过审计的随机试卷。"
 policy:
   allow_implicit_invocation: true
